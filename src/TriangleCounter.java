@@ -15,27 +15,27 @@ public class TriangleCounter extends Configured implements Tool
 	// first Mapper
     public static class ParseLongLongPairsMapper extends Mapper<LongWritable, Text, LongWritable, LongWritable>
     {
-        LongWritable mKey = new LongWritable();
-        LongWritable mValue = new LongWritable();
+        LongWritable u = new LongWritable();
+        LongWritable v = new LongWritable();
 
         public void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException
         {
             String line = value.toString();
             StringTokenizer tokenizer = new StringTokenizer(line);
-            long e1,e2;
+            long node1,node2;
             if (tokenizer.hasMoreTokens())
             {
-                e1 = Long.parseLong(tokenizer.nextToken());
+                node1 = Long.parseLong(tokenizer.nextToken());
                 if (!tokenizer.hasMoreTokens())
-                    throw new RuntimeException("invalid edge line " + line);
-                e2 = Long.parseLong(tokenizer.nextToken());
+                    throw new RuntimeException("invalid data in line" + line);
+                node2 = Long.parseLong(tokenizer.nextToken());
 
-                if (e1 < e2)
+                if (node1 < node2)
                 {
-                    mKey.set(e1);
-                    mValue.set(e2);
-                    context.write(mKey,mValue);
+                    u.set(node1);
+                    v.set(node2);
+                    context.write(u,v);
                 }
             }
         }
@@ -56,20 +56,22 @@ public class TriangleCounter extends Configured implements Tool
             Iterator<LongWritable> vs = values.iterator();
             for (size = 0; vs.hasNext(); )
             {
-                if (vArray.length==size)
+                if (vArray.length==size)//add size if array is full
                 {
                     vArray = Arrays.copyOf(vArray, vArray.length*2);
                 }
 
-                long e = vs.next().get();
-                vArray[size++] = e;
+                long node = vs.next().get();
+                vArray[size++] = node;
 
-                rKey.set(key.toString() + "," + Long.toString(e));
+                // generates all possible sets of edges.
+                rKey.set(key.toString() + "," + Long.toString(node));
                 context.write(rKey, zero);
             }
 
             Arrays.sort(vArray, 0, size);
 
+            // generates all possible triples for a vertex.
             for (int i=0; i<size; ++i)
             {
                 for (int j=i+1; j<size; ++j)
@@ -96,7 +98,7 @@ public class TriangleCounter extends Configured implements Tool
             {
                 mKey.set(tokenizer.nextToken());
                 if (!tokenizer.hasMoreTokens())
-                    throw new RuntimeException("invalid intermediate line " + line);
+                    throw new RuntimeException("invalid data2 line " + line);
                 mValue.set(Long.parseLong(tokenizer.nextToken()));
                 context.write(mKey, mValue);
             }
@@ -122,7 +124,6 @@ public class TriangleCounter extends Configured implements Tool
             boolean isClosed = false;
             long c = 0, n = 0;
             Iterator<LongWritable> vs = values.iterator();
-
             while (vs.hasNext())
             {
                 c += vs.next().get();
